@@ -13,7 +13,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-client = genai.Client(api_key="AIzaSyCNNeooGtujtyCu0agPY18ZoyJ-9lW6FtM")
+client = genai.Client(api_key="API_KEY_HERE")
 
 HISTORY_FILE = "history.json"
 
