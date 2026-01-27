@@ -1,0 +1,16 @@
+# Python virtual environment
+venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Environment variables (API key irukkum)
+.env
+
+# React node modules
+frontend/node_modules/
+
+# OS junk files
+.DS_Store
+Thumbs.db
