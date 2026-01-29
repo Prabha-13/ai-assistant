@@ -1,89 +1,74 @@
-/* Theme variables */
-:root {
-  --bg: #ffffff;
-  --sidebar: #f7f7f8;
-  --text: #000000;
-  --border: #e5e7eb;
-  --user: #2563eb;
-  --ai: #e5e7eb;
-}
-
-[data-theme="dark"] {
-  --bg: #0f172a;
-  --sidebar: #020617;
-  --text: #ffffff;
-  --border: #1e293b;
-  --user: #2563eb;
-  --ai: #334155;
-}
-
 body {
   margin: 0;
   font-family: "Segoe UI", sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  transition: background 0.3s, color 0.3s;
+  background: #0f172a;
+  color: white;
 }
 
 .app {
   display: flex;
   height: 100vh;
-  position: relative;
 }
 
 /* Sidebar */
 .sidebar {
   width: 260px;
-  background: var(--sidebar);
+  background: #020617;
   padding: 15px;
-  border-left: 1px solid var(--border);
+  border-right: 1px solid #1e293b;
   overflow-y: auto;
 }
 
-.sidebar-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.sidebar h2 {
+  margin-bottom: 10px;
 }
 
 .new-chat {
-  padding: 8px 12px;
-  background: var(--user);
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 10px;
+  background: #2563eb;
   border: none;
   color: white;
   border-radius: 6px;
   cursor: pointer;
 }
 
-.search-icon {
-  font-size: 20px;
-  cursor: pointer;
-}
-
+/* 🔍 Search Box */
 .search-box {
   width: 100%;
-  margin: 10px 0;
   padding: 8px;
+  margin-bottom: 10px;
   border-radius: 6px;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  color: var(--text);
+  border: 1px solid #1e293b;
+  background: #020617;
+  color: white;
+  outline: none;
+}
+
+.search-box::placeholder {
+  color: #94a3b8;
 }
 
 .session-row {
   display: flex;
   justify-content: space-between;
   padding: 8px;
-  border: 1px solid var(--border);
+  background: #020617;
+  border: 1px solid #1e293b;
   border-radius: 6px;
   margin-bottom: 5px;
   cursor: pointer;
 }
 
+.session-row:hover {
+  background: #1e293b;
+}
+
 .session-row button {
   background: none;
   border: none;
-  color: red;
+  color: #f87171;
   cursor: pointer;
 }
 
@@ -96,115 +81,90 @@ body {
 
 .header {
   padding: 15px;
-  background: var(--sidebar);
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.hamburger {
-  font-size: 22px;
-  cursor: pointer;
-}
-
-.theme-toggle {
-  background: none;
-  border: none;
-  font-size: 20px;
-  cursor: pointer;
+  background: #020617;
+  border-bottom: 1px solid #1e293b;
+  text-align: center;
+  font-weight: bold;
 }
 
 .messages {
   flex: 1;
   padding: 20px;
   overflow-y: auto;
+  background: #0f172a;
 }
 
 .user-bubble {
   margin-left: auto;
-  background: var(--user);
-  color: white;
-  padding: 10px;
-  border-radius: 10px;
+  background: #2563eb;
+  padding: 12px;
+  border-radius: 12px;
   max-width: 70%;
   margin-bottom: 10px;
+  word-wrap: break-word;
 }
 
 .ai-bubble {
   margin-right: auto;
-  background: var(--ai);
-  padding: 10px;
-  border-radius: 10px;
+  background: #334155;
+  padding: 12px;
+  border-radius: 12px;
   max-width: 70%;
   margin-bottom: 10px;
-}
-
-/* File Preview */
-.file-preview {
-  padding: 8px 12px;
-  background: var(--sidebar);
-  margin: 5px 10px;
-  border-radius: 6px;
-  font-size: 14px;
+  word-wrap: break-word;
 }
 
 /* Input */
 .input-box {
   display: flex;
-  align-items: center;
   padding: 10px;
-  border-top: 1px solid var(--border);
-  background: var(--sidebar);
+  border-top: 1px solid #1e293b;
+  background: #020617;
 }
 
 .input-box input {
   flex: 1;
   padding: 10px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  color: var(--text);
+  background: #020617;
+  border: 1px solid #1e293b;
+  color: white;
   border-radius: 6px;
 }
 
-.upload-icon {
-  font-size: 20px;
-  margin: 0 10px;
-  cursor: pointer;
-}
-
 .input-box button {
+  margin-left: 10px;
   padding: 10px 20px;
-  background: var(--user);
+  background: #2563eb;
   border: none;
   color: white;
   border-radius: 6px;
   cursor: pointer;
 }
 
-/* Overlay */
-.overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0,0,0,0.4);
-  z-index: 5;
-}
-
-/* Mobile Telegram-style sidebar */
+/* 📱 Mobile Responsive */
 @media (max-width: 768px) {
   .sidebar {
-    position: fixed;
-    right: -280px;
-    top: 0;
-    height: 100%;
-    z-index: 10;
-    transition: right 0.3s ease;
+    width: 200px;
   }
 
-  .sidebar.open {
-    right: 0;
+  .user-bubble,
+  .ai-bubble {
+    max-width: 90%;
+  }
+}
+
+@media (max-width: 480px) {
+  .app {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid #1e293b;
+  }
+
+  .chat-area {
+    height: calc(100vh - 250px);
   }
 }
