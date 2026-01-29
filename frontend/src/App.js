@@ -1,80 +1,58 @@
-import { useEffect, useRef, useState } from "react";
-import ReactMarkdown from "react-markdown";
+import React, { useEffect, useState } from "react";
 import "./App.css";
 
 const API_BASE = "https://ai-assistant-zi8b.onrender.com";
 
 function App() {
-  const [theme, setTheme] = useState("dark");
   const [sessions, setSessions] = useState([]);
-  const [search, setSearch] = useState("");
+  const [filteredSessions, setFilteredSessions] = useState([]);
   const [currentSession, setCurrentSession] = useState(null);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
-  const [file, setFile] = useState(null);
-  const bottomRef = useRef(null);
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     fetchSessions();
   }, []);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    if (search.trim() === "") {
+      setFilteredSessions(sessions);
+    } else {
+      setFilteredSessions(
+        sessions.filter(s =>
+          s.title.toLowerCase().includes(search.toLowerCase())
+        )
+      );
+    }
+  }, [search, sessions]);
 
   const fetchSessions = async () => {
     const res = await fetch(`${API_BASE}/sessions`);
-    const data = await res.json();
-    setSessions(data);
+    const ids = await res.json();
+
+    const withTitles = await Promise.all(
+      ids.map(async (id) => {
+        const h = await fetch(`${API_BASE}/history/${id}`);
+        const msgs = await h.json();
+        const firstUser = msgs.find(m => m.role === "user");
+        const title = firstUser
+          ? firstUser.content.split(" ").slice(0, 4).join(" ")
+          : "New Chat";
+        return { id, title };
+      })
+    );
+
+    setSessions(withTitles);
+    setFilteredSessions(withTitles);
   };
 
   const loadHistory = async (id) => {
+    setCurrentSession(id);
     const res = await fetch(`${API_BASE}/history/${id}`);
     const data = await res.json();
-    setCurrentSession(id);
-    setMessages(data.map(m => ({
-      sender: m.role === "user" ? "user" : "ai",
-      text: m.content
-    })));
-  };
-
-  const sendMessage = async () => {
-    if (!input.trim() && !file) return;
-
-    const userMsg = { sender: "user", text: input || `📎 ${file.name}` };
-    setMessages(prev => [...prev, userMsg]);
-    setInput("");
-
-    let response;
-
-    if (file) {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("question", input || "Analyze this file");
-      if (currentSession) formData.append("session_id", currentSession);
-
-      response = await fetch(`${API_BASE}/upload`, {
-        method: "POST",
-        body: formData
-      });
-
-      setFile(null);
-    } else {
-      response = await fetch(`${API_BASE}/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: input,
-          session_id: currentSession
-        })
-      });
-    }
-
-    const data = await response.json();
-    setCurrentSession(data.session_id);
-    fetchSessions();
-
-    setMessages(prev => [...prev, { sender: "ai", text: data.reply }]);
+    setMessages(data);
   };
 
   const newChat = () => {
@@ -84,91 +62,94 @@ function App() {
 
   const deleteChat = async (id) => {
     await fetch(`${API_BASE}/delete/${id}`, { method: "DELETE" });
-    if (id === currentSession) {
+    fetchSessions();
+    if (currentSession === id) {
       setCurrentSession(null);
       setMessages([]);
     }
+  };
+
+  const sendMessage = async () => {
+    if (!input.trim()) return;
+    setLoading(true);
+
+    const payload = {
+      message: input,
+      session_id: currentSession
+    };
+
+    const res = await fetch(`${API_BASE}/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+    setCurrentSession(data.session_id);
+
+    const h = await fetch(`${API_BASE}/history/${data.session_id}`);
+    const fullHistory = await h.json();
+    setMessages(fullHistory);
+
+    setInput("");
+    setLoading(false);
     fetchSessions();
   };
 
-  const filteredSessions = sessions.filter(id =>
-    id.toLowerCase().includes(search.toLowerCase())
-  );
-
   return (
-    <div className={`app ${theme}`}>
-      {/* SIDEBAR */}
+    <div className="app">
       <div className="sidebar">
-        <div className="title">AI Assistant</div>
-
+        <h2>AI Assistant</h2>
         <input
           className="search"
           placeholder="Search chats..."
           value={search}
-          onChange={e => setSearch(e.target.value)}
+          onChange={(e) => setSearch(e.target.value)}
         />
-
         <button className="newchat" onClick={newChat}>+ New Chat</button>
 
-        <div className="session-list">
-          {filteredSessions.map(id => (
+        <div className="sessions">
+          {filteredSessions.map(chat => (
             <div
-              key={id}
-              className={`session ${currentSession === id ? "active" : ""}`}
-              onClick={() => loadHistory(id)}
+              key={chat.id}
+              className={`session ${currentSession === chat.id ? "active" : ""}`}
+              onClick={() => loadHistory(chat.id)}
             >
-              {id.slice(0, 10)}
+              {chat.title}
               <span
-                style={{ float: "right", color: "red" }}
-                onClick={(e) => { e.stopPropagation(); deleteChat(id); }}
+                className="delete"
+                onClick={(e) => { e.stopPropagation(); deleteChat(chat.id); }}
               >🗑</span>
             </div>
           ))}
         </div>
       </div>
 
-      {/* CHAT AREA */}
-      <div className="chat-area">
-        <div className="topbar">
-          <span>AI Assistant</span>
-          <button className="theme" onClick={() => setTheme(t => t === "dark" ? "light" : "dark")}>
-            {theme === "dark" ? "🌙" : "☀️"}
-          </button>
-        </div>
+      <div className="chat">
+        <div className="chat-header">AI Assistant</div>
 
-        <div className="messages">
+        <div className="chat-body">
           {messages.length === 0 && (
-            <div className="welcome">Start a new conversation 👋</div>
+            <div className="welcome">Hi 👋 How can I help you today?</div>
           )}
 
           {messages.map((m, i) => (
-            <div key={i} className={`bubble ${m.sender}`}>
-              <ReactMarkdown>{m.text}</ReactMarkdown>
+            <div key={i} className={`bubble ${m.role}`}>
+              {m.content}
             </div>
           ))}
-          <div ref={bottomRef}></div>
         </div>
 
-        {/* INPUT BAR */}
-        <div className="input-bar">
-          <label className="attach">
-            📎
-            <input
-              type="file"
-              hidden
-              onChange={e => setFile(e.target.files[0])}
-            />
-          </label>
-
+        <div className="chat-input">
           <input
-            type="text"
-            placeholder={file ? `File: ${file.name}` : "Type a message..."}
+            placeholder="Type a message..."
             value={input}
-            onChange={e => setInput(e.target.value)}
-            onKeyDown={e => e.key === "Enter" && sendMessage()}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && sendMessage()}
           />
-
-          <button onClick={sendMessage}>Send</button>
+          <button onClick={sendMessage} disabled={loading}>
+            {loading ? "..." : "Send"}
+          </button>
         </div>
       </div>
     </div>
