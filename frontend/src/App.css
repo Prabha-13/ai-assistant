@@ -1,59 +1,89 @@
+/* Theme variables */
+:root {
+  --bg: #ffffff;
+  --sidebar: #f7f7f8;
+  --text: #000000;
+  --border: #e5e7eb;
+  --user: #2563eb;
+  --ai: #e5e7eb;
+}
+
+[data-theme="dark"] {
+  --bg: #0f172a;
+  --sidebar: #020617;
+  --text: #ffffff;
+  --border: #1e293b;
+  --user: #2563eb;
+  --ai: #334155;
+}
+
 body {
   margin: 0;
   font-family: "Segoe UI", sans-serif;
-  background: #0f172a;
-  color: white;
+  background: var(--bg);
+  color: var(--text);
+  transition: background 0.3s, color 0.3s;
 }
 
 .app {
   display: flex;
   height: 100vh;
+  position: relative;
 }
 
 /* Sidebar */
 .sidebar {
   width: 260px;
-  background: #020617;
+  background: var(--sidebar);
   padding: 15px;
-  border-right: 1px solid #1e293b;
+  border-left: 1px solid var(--border);
   overflow-y: auto;
-  overflow-x: hidden;
 }
 
-.sidebar h2 {
-  margin-bottom: 10px;
+.sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .new-chat {
-  width: 100%;
-  padding: 8px;
-  margin-bottom: 10px;
-  background: #2563eb;
+  padding: 8px 12px;
+  background: var(--user);
   border: none;
   color: white;
   border-radius: 6px;
   cursor: pointer;
+}
+
+.search-icon {
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.search-box {
+  width: 100%;
+  margin: 10px 0;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
 }
 
 .session-row {
   display: flex;
   justify-content: space-between;
   padding: 8px;
-  background: #020617;
-  border: 1px solid #1e293b;
+  border: 1px solid var(--border);
   border-radius: 6px;
   margin-bottom: 5px;
   cursor: pointer;
 }
 
-.session-row:hover {
-  background: #1e293b;
-}
-
 .session-row button {
   background: none;
   border: none;
-  color: #f87171;
+  color: red;
   cursor: pointer;
 }
 
@@ -66,104 +96,115 @@ body {
 
 .header {
   padding: 15px;
-  background: #020617;
-  border-bottom: 1px solid #1e293b;
-  text-align: center;
-  font-weight: bold;
+  background: var(--sidebar);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.hamburger {
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.theme-toggle {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
 }
 
 .messages {
   flex: 1;
   padding: 20px;
   overflow-y: auto;
-  background: #0f172a;
 }
 
 .user-bubble {
   margin-left: auto;
-  background: #2563eb;
+  background: var(--user);
+  color: white;
   padding: 10px;
   border-radius: 10px;
-  max-width: 90%;
+  max-width: 70%;
   margin-bottom: 10px;
-  word-wrap: break-word;
 }
 
 .ai-bubble {
   margin-right: auto;
-  background: #334155;
+  background: var(--ai);
   padding: 10px;
   border-radius: 10px;
-  max-width: 90%;
+  max-width: 70%;
   margin-bottom: 10px;
-  word-wrap: break-word;
+}
+
+/* File Preview */
+.file-preview {
+  padding: 8px 12px;
+  background: var(--sidebar);
+  margin: 5px 10px;
+  border-radius: 6px;
+  font-size: 14px;
 }
 
 /* Input */
 .input-box {
   display: flex;
+  align-items: center;
   padding: 10px;
-  border-top: 1px solid #1e293b;
-  background: #020617;
+  border-top: 1px solid var(--border);
+  background: var(--sidebar);
 }
 
 .input-box input {
   flex: 1;
   padding: 10px;
-  background: #020617;
-  border: 1px solid #1e293b;
-  color: white;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
   border-radius: 6px;
 }
 
+.upload-icon {
+  font-size: 20px;
+  margin: 0 10px;
+  cursor: pointer;
+}
+
 .input-box button {
-  margin-left: 10px;
   padding: 10px 20px;
-  background: #2563eb;
+  background: var(--user);
   border: none;
   color: white;
   border-radius: 6px;
   cursor: pointer;
 }
 
-/* 🔥 MOBILE RESPONSIVE */
+/* Overlay */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 5;
+}
+
+/* Mobile Telegram-style sidebar */
 @media (max-width: 768px) {
-  .app {
-    flex-direction: column;
-  }
-
   .sidebar {
-    width: 100%;
-    height: auto;
-    border-right: none;
-    border-bottom: 1px solid #1e293b;
+    position: fixed;
+    right: -280px;
+    top: 0;
+    height: 100%;
+    z-index: 10;
+    transition: right 0.3s ease;
   }
 
-  .chat-area {
-    width: 100%;
-  }
-
-  .header {
-    font-size: 16px;
-    padding: 10px;
-  }
-
-  .messages {
-    padding: 10px;
-  }
-
-  .user-bubble,
-  .ai-bubble {
-    max-width: 95%;
-    font-size: 14px;
-    line-height: 1.5;
-  }
-
-  .input-box input {
-    font-size: 14px;
-  }
-
-  .new-chat {
-    font-size: 14px;
+  .sidebar.open {
+    right: 0;
   }
 }
