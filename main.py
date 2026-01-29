@@ -6,9 +6,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from google import genai
 
-app = FastAPI()
+app = FastAPI(title="AI Assistant (Gemini)")
 
-# Allow frontend access
+# CORS for frontend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -16,10 +16,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Load Gemini API key from Render Environment Variable
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+# Load Gemini API key from environment
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+if not GEMINI_API_KEY:
+    raise RuntimeError("GEMINI_API_KEY not set in environment")
+
+client = genai.Client(api_key=GEMINI_API_KEY)
 
 HISTORY_FILE = "history.json"
+
 
 class ChatRequest(BaseModel):
     message: str
@@ -48,10 +53,12 @@ def chat(req: ChatRequest):
         history[session_id] = []
     else:
         session_id = req.session_id
+        if session_id not in history:
+            history[session_id] = []
 
     history[session_id].append({"role": "user", "content": req.message})
 
-    system_prompt = "You are a helpful AI assistant. Answer clearly and in simple words."
+    system_prompt = "You are a helpful AI assistant. Answer clearly in simple English."
     full_prompt = system_prompt + "\n\n"
 
     for msg in history[session_id]:
@@ -64,10 +71,9 @@ def chat(req: ChatRequest):
         )
         ai_text = response.text
     except Exception as e:
-        print("Gemini Error:", e)
         ai_text = f"AI Error: {str(e)}"
 
-    history[session_id].append({"role": "ai", "content": ai_text})
+    history[session_id].append({"role": "assistant", "content": ai_text})
     save_history(history)
 
     return {
@@ -91,7 +97,6 @@ def get_history(session_id: str):
 @app.delete("/delete/{session_id}")
 def delete_session(session_id: str):
     history = load_history()
-
     if session_id in history:
         del history[session_id]
         save_history(history)
