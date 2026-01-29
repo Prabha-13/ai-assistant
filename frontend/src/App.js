@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import "./App.css";
 
-const API = "http://127.0.0.1:8000"; // change to Render URL later
+const API = "https://ai-assistant-zi8b.onrender.com";
 
 function App() {
   const [sessions, setSessions] = useState([]);
