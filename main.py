@@ -1,12 +1,12 @@
-import json, uuid, os
+import json, uuid, os, io
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from groq import Groq
 import PyPDF2
 from docx import Document
 from PIL import Image
-import io
 
 app = FastAPI(title="AI Assistant (Groq + File Upload)")
 
@@ -41,7 +41,7 @@ def extract_text(file: UploadFile):
     if file.filename.endswith(".pdf"):
         reader = PyPDF2.PdfReader(file.file)
         for page in reader.pages:
-            content += page.extract_text() + "\n"
+            content += (page.extract_text() or "") + "\n"
 
     elif file.filename.endswith(".txt"):
         content = file.file.read().decode("utf-8")
@@ -93,7 +93,11 @@ def chat(req: ChatRequest):
     return {"reply": ai_text, "session_id": session_id}
 
 @app.post("/upload")
-def upload_file(file: UploadFile = File(...), question: str = Form(...), session_id: str = Form(None)):
+def upload_file(
+    file: UploadFile = File(...),
+    question: str = Form(...),
+    session_id: str = Form(None)
+):
     text = extract_text(file)
 
     combined_prompt = f"""
@@ -122,5 +126,6 @@ def delete_session(session_id: str):
         save_history(history)
         return {"status": "deleted"}
     raise HTTPException(status_code=404, detail="Session not found")
-# 🔥 Serve React build as root
+
+# 🔥 Serve React build
 app.mount("/", StaticFiles(directory="frontend/build", html=True), name="frontend")
