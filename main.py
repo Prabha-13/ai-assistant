@@ -3,10 +3,12 @@ import uuid
 import os
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from groq import Groq
 
-app = FastAPI(title="AI Assistant (Groq)")
+app = FastAPI(title="AI Assistant")
 
 app.add_middleware(
     CORSMiddleware,
@@ -25,11 +27,10 @@ class ChatRequest(BaseModel):
 
 
 def load_history():
-    try:
-        with open(HISTORY_FILE, "r") as f:
-            return json.load(f)
-    except:
+    if not os.path.exists(HISTORY_FILE):
         return {}
+    with open(HISTORY_FILE, "r") as f:
+        return json.load(f)
 
 
 def save_history(data):
@@ -37,47 +38,25 @@ def save_history(data):
         json.dump(data, f, indent=2)
 
 
-def generate_title(first_message: str):
-    try:
-        response = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            messages=[
-                {"role": "system", "content": "Generate a short 3-5 word chat title."},
-                {"role": "user", "content": first_message}
-            ]
-        )
-        return response.choices[0].message.content.strip()
-    except:
-        return first_message[:20]
-
-
 @app.post("/chat")
 def chat(req: ChatRequest):
     history = load_history()
 
-    # New session
     if not req.session_id:
         session_id = str(uuid.uuid4())
-        title = generate_title(req.message)
-        history[session_id] = {
-            "title": title,
-            "messages": []
-        }
+        history[session_id] = []
     else:
         session_id = req.session_id
         if session_id not in history:
-            history[session_id] = {
-                "title": generate_title(req.message),
-                "messages": []
-            }
+            history[session_id] = []
 
-    history[session_id]["messages"].append({"role": "user", "content": req.message})
+    history[session_id].append({"role": "user", "content": req.message})
 
     messages = [
-        {"role": "system", "content": "You are a helpful AI assistant. Answer clearly in simple words."}
+        {"role": "system", "content": "You are a helpful AI assistant. Answer clearly and simply."}
     ]
 
-    for msg in history[session_id]["messages"]:
+    for msg in history[session_id]:
         role = "assistant" if msg["role"] == "ai" else "user"
         messages.append({"role": role, "content": msg["content"]})
 
@@ -90,28 +69,20 @@ def chat(req: ChatRequest):
     except Exception as e:
         ai_text = f"AI Error: {str(e)}"
 
-    history[session_id]["messages"].append({"role": "ai", "content": ai_text})
+    history[session_id].append({"role": "ai", "content": ai_text})
     save_history(history)
 
-    return {
-        "reply": ai_text,
-        "session_id": session_id
-    }
+    return {"reply": ai_text, "session_id": session_id}
 
 
 @app.get("/sessions")
 def get_sessions():
-    history = load_history()
-    return [
-        {"id": k, "title": v.get("title", k[:8])}
-        for k, v in history.items()
-    ]
+    return list(load_history().keys())
 
 
 @app.get("/history/{session_id}")
 def get_history(session_id: str):
-    history = load_history()
-    return history.get(session_id, {}).get("messages", [])
+    return load_history().get(session_id, [])
 
 
 @app.delete("/delete/{session_id}")
@@ -121,5 +92,13 @@ def delete_session(session_id: str):
         del history[session_id]
         save_history(history)
         return {"status": "deleted"}
-    else:
-        raise HTTPException(status_code=404, detail="Session not found")
+    raise HTTPException(status_code=404, detail="Session not found")
+
+
+# ---------- Serve React Build ----------
+if os.path.exists("frontend/build"):
+    app.mount("/static", StaticFiles(directory="frontend/build/static"), name="static")
+
+    @app.get("/")
+    def serve_react():
+        return FileResponse("frontend/build/index.html")
