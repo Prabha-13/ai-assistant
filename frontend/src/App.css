@@ -17,6 +17,7 @@ body {
   padding: 15px;
   border-right: 1px solid #1e293b;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .sidebar h2 {
@@ -83,8 +84,9 @@ body {
   background: #2563eb;
   padding: 10px;
   border-radius: 10px;
-  max-width: 70%;
+  max-width: 90%;
   margin-bottom: 10px;
+  word-wrap: break-word;
 }
 
 .ai-bubble {
@@ -92,8 +94,9 @@ body {
   background: #334155;
   padding: 10px;
   border-radius: 10px;
-  max-width: 70%;
+  max-width: 90%;
   margin-bottom: 10px;
+  word-wrap: break-word;
 }
 
 /* Input */
@@ -121,4 +124,46 @@ body {
   color: white;
   border-radius: 6px;
   cursor: pointer;
+}
+
+/* 🔥 MOBILE RESPONSIVE */
+@media (max-width: 768px) {
+  .app {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    height: auto;
+    border-right: none;
+    border-bottom: 1px solid #1e293b;
+  }
+
+  .chat-area {
+    width: 100%;
+  }
+
+  .header {
+    font-size: 16px;
+    padding: 10px;
+  }
+
+  .messages {
+    padding: 10px;
+  }
+
+  .user-bubble,
+  .ai-bubble {
+    max-width: 95%;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .input-box input {
+    font-size: 14px;
+  }
+
+  .new-chat {
+    font-size: 14px;
+  }
 }
