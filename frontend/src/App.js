@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import "./App.css";
 
-const API = ""; // relative path for Render
+const API = window.location.origin; // works in Render & local
 
 function App() {
   const [sessions, setSessions] = useState([]);

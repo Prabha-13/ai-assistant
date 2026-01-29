@@ -9,7 +9,6 @@ from groq import Groq
 
 app = FastAPI(title="AI Assistant")
 
-# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -17,7 +16,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Groq Client
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 HISTORY_FILE = "history.json"
@@ -28,10 +26,11 @@ class ChatRequest(BaseModel):
 
 
 def load_history():
-    if not os.path.exists(HISTORY_FILE):
+    try:
+        with open(HISTORY_FILE, "r") as f:
+            return json.load(f)
+    except:
         return {}
-    with open(HISTORY_FILE, "r") as f:
-        return json.load(f)
 
 
 def save_history(data):
@@ -45,19 +44,22 @@ def chat(req: ChatRequest):
 
     if not req.session_id:
         session_id = str(uuid.uuid4())
-        history[session_id] = []
+        history[session_id] = {
+            "title": req.message[:30],
+            "messages": []
+        }
     else:
         session_id = req.session_id
         if session_id not in history:
-            history[session_id] = []
+            history[session_id] = {
+                "title": req.message[:30],
+                "messages": []
+            }
 
-    history[session_id].append({"role": "user", "content": req.message})
+    history[session_id]["messages"].append({"role": "user", "content": req.message})
 
-    messages = [
-        {"role": "system", "content": "You are a helpful AI assistant. Answer clearly in simple words."}
-    ]
-
-    for msg in history[session_id]:
+    messages = [{"role": "system", "content": "You are a helpful AI assistant."}]
+    for msg in history[session_id]["messages"]:
         role = "assistant" if msg["role"] == "ai" else "user"
         messages.append({"role": role, "content": msg["content"]})
 
@@ -70,25 +72,22 @@ def chat(req: ChatRequest):
     except Exception as e:
         ai_text = f"AI Error: {str(e)}"
 
-    history[session_id].append({"role": "ai", "content": ai_text})
+    history[session_id]["messages"].append({"role": "ai", "content": ai_text})
     save_history(history)
 
-    return {
-        "reply": ai_text,
-        "session_id": session_id
-    }
+    return {"reply": ai_text, "session_id": session_id}
 
 
 @app.get("/sessions")
 def get_sessions():
     history = load_history()
-    return list(history.keys())
+    return [{"id": k, "title": v["title"]} for k, v in history.items()]
 
 
 @app.get("/history/{session_id}")
 def get_history(session_id: str):
     history = load_history()
-    return history.get(session_id, [])
+    return history.get(session_id, {}).get("messages", [])
 
 
 @app.delete("/delete/{session_id}")
@@ -100,7 +99,6 @@ def delete_session(session_id: str):
         return {"status": "deleted"}
     else:
         raise HTTPException(status_code=404, detail="Session not found")
-
-
+# 
 # 🔥 Serve React build as root
 app.mount("/", StaticFiles(directory="frontend/build", html=True), name="frontend")
