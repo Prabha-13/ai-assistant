@@ -4,11 +4,10 @@ import os
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from google import genai
+from groq import Groq
 
-app = FastAPI(title="AI Assistant (Gemini)")
+app = FastAPI(title="AI Assistant (Groq)")
 
-# CORS for frontend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -16,20 +15,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Load Gemini API key from environment
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-if not GEMINI_API_KEY:
-    raise RuntimeError("GEMINI_API_KEY not set in environment")
-
-client = genai.Client(api_key=GEMINI_API_KEY)
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 HISTORY_FILE = "history.json"
-
 
 class ChatRequest(BaseModel):
     message: str
     session_id: str | None = None
-
 
 def load_history():
     try:
@@ -38,11 +30,9 @@ def load_history():
     except:
         return {}
 
-
 def save_history(data):
     with open(HISTORY_FILE, "w") as f:
         json.dump(data, f, indent=2)
-
 
 @app.post("/chat")
 def chat(req: ChatRequest):
@@ -58,22 +48,24 @@ def chat(req: ChatRequest):
 
     history[session_id].append({"role": "user", "content": req.message})
 
-    system_prompt = "You are a helpful AI assistant. Answer clearly in simple English."
-    full_prompt = system_prompt + "\n\n"
+    messages = [
+        {"role": "system", "content": "You are a helpful AI assistant. Answer clearly in simple words."}
+    ]
 
     for msg in history[session_id]:
-        full_prompt += f"{msg['role']}: {msg['content']}\n"
+        role = "assistant" if msg["role"] == "ai" else "user"
+        messages.append({"role": role, "content": msg["content"]})
 
     try:
-        response = client.models.generate_content(
-            model="models/gemini-2.0-flash",
-            contents=full_prompt
+        response = client.chat.completions.create(
+            model="llama3-8b-8192",
+            messages=messages
         )
-        ai_text = response.text
+        ai_text = response.choices[0].message.content
     except Exception as e:
         ai_text = f"AI Error: {str(e)}"
 
-    history[session_id].append({"role": "assistant", "content": ai_text})
+    history[session_id].append({"role": "ai", "content": ai_text})
     save_history(history)
 
     return {
@@ -81,18 +73,15 @@ def chat(req: ChatRequest):
         "session_id": session_id
     }
 
-
 @app.get("/sessions")
 def get_sessions():
     history = load_history()
     return list(history.keys())
 
-
 @app.get("/history/{session_id}")
 def get_history(session_id: str):
     history = load_history()
     return history.get(session_id, [])
-
 
 @app.delete("/delete/{session_id}")
 def delete_session(session_id: str):
