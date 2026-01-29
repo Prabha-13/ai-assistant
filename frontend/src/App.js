@@ -1,216 +1,145 @@
-import { useState, useEffect, useRef } from "react";
-import ReactMarkdown from "react-markdown";
+import React, { useState, useEffect, useRef } from "react";
 import "./App.css";
 
-const API_BASE = import.meta.env.PROD
-  ? "https://ai-assistant-zi8b.onrender.com"
-  : "http://127.0.0.1:8000";
+const API_BASE = "https://ai-assistant-zi8b.onrender.com";
 
 function App() {
   const [sessions, setSessions] = useState([]);
-  const [filteredSessions, setFilteredSessions] = useState([]);
-  const [currentSession, setCurrentSession] = useState(null);
-  const [messages, setMessages] = useState([
-    { sender: "ai", text: "Hi 👋 How can I help you today?" }
-  ]);
+  const [activeSession, setActiveSession] = useState(null);
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [search, setSearch] = useState("");
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [theme, setTheme] = useState("dark");
-  const fileInputRef = useRef(null);
-  const chatEndRef = useRef(null);
+  const [file, setFile] = useState(null);
+  const [dark, setDark] = useState(true);
+  const bottomRef = useRef(null);
 
   useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-  }, [theme]);
-
-  useEffect(() => {
-    fetchSessions();
+    loadSessions();
   }, []);
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  useEffect(() => {
-    if (!search.trim()) {
-      setFilteredSessions(sessions);
-    } else {
-      setFilteredSessions(
-        sessions.filter((s) =>
-          s.title.toLowerCase().includes(search.toLowerCase())
-        )
-      );
-    }
-  }, [search, sessions]);
-
-  const fetchSessions = async () => {
+  const loadSessions = async () => {
     const res = await fetch(`${API_BASE}/sessions`);
-    const ids = await res.json();
-
-    const sessionWithTitles = await Promise.all(
-      ids.map(async (id) => {
-        const h = await fetch(`${API_BASE}/history/${id}`);
-        const data = await h.json();
-        const firstUserMsg = data.find((m) => m.role === "user");
-        return {
-          id,
-          title: firstUserMsg ? firstUserMsg.content.slice(0, 30) : "New Chat"
-        };
-      })
-    );
-
-    setSessions(sessionWithTitles);
-    setFilteredSessions(sessionWithTitles);
+    const data = await res.json();
+    setSessions(data.reverse());
   };
 
   const loadHistory = async (id) => {
     const res = await fetch(`${API_BASE}/history/${id}`);
     const data = await res.json();
-    setCurrentSession(id);
-    setMessages(
-      data.map((m) => ({
-        sender: m.role === "user" ? "user" : "ai",
-        text: m.content
-      }))
-    );
-    if (window.innerWidth < 768) setSidebarOpen(false);
-  };
-
-  const sendMessage = async () => {
-    if (!input.trim()) return;
-
-    const userMsg = { sender: "user", text: input };
-    setMessages((prev) => [...prev, userMsg]);
-    setInput("");
-
-    const res = await fetch(`${API_BASE}/chat`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        message: userMsg.text,
-        session_id: currentSession
-      })
-    });
-
-    const data = await res.json();
-    setCurrentSession(data.session_id);
-    fetchSessions();
-
-    const aiMsg = { sender: "ai", text: data.reply };
-    setMessages((prev) => [...prev, aiMsg]);
-  };
-
-  const uploadFile = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const question = prompt("Ask something about this file:");
-    if (!question) return;
-
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("question", question);
-    if (currentSession) formData.append("session_id", currentSession);
-
-    const res = await fetch(`${API_BASE}/upload`, {
-      method: "POST",
-      body: formData
-    });
-
-    const data = await res.json();
-    setCurrentSession(data.session_id);
-    fetchSessions();
-
-    setMessages((prev) => [
-      ...prev,
-      { sender: "user", text: question },
-      { sender: "ai", text: data.reply }
-    ]);
+    setActiveSession(id);
+    setMessages(data);
   };
 
   const newChat = () => {
-    setCurrentSession(null);
-    setMessages([{ sender: "ai", text: "Hi 👋 How can I help you today?" }]);
-    if (window.innerWidth < 768) setSidebarOpen(false);
+    setActiveSession(null);
+    setMessages([]);
   };
 
-  const deleteChat = async (id) => {
-    await fetch(`${API_BASE}/delete/${id}`, { method: "DELETE" });
-    if (id === currentSession) {
-      setMessages([{ sender: "ai", text: "Hi 👋 How can I help you today?" }]);
-      setCurrentSession(null);
+  const sendMessage = async () => {
+    if (!input && !file) return;
+
+    let formData;
+    let response;
+
+    if (file) {
+      formData = new FormData();
+      formData.append("file", file);
+      formData.append("question", input || "Explain this file");
+      if (activeSession) formData.append("session_id", activeSession);
+
+      response = await fetch(`${API_BASE}/upload`, {
+        method: "POST",
+        body: formData
+      });
+      setFile(null);
+    } else {
+      response = await fetch(`${API_BASE}/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: input,
+          session_id: activeSession
+        })
+      });
     }
-    fetchSessions();
+
+    const data = await response.json();
+    setActiveSession(data.session_id);
+    setMessages((prev) => [
+      ...prev,
+      { role: "user", content: input },
+      { role: "ai", content: data.reply }
+    ]);
+    setInput("");
+    loadSessions();
   };
 
   return (
-    <div className="app">
-      {sidebarOpen && <div className="overlay" onClick={() => setSidebarOpen(false)} />}
-
-      <div className={`sidebar ${sidebarOpen ? "open" : "closed"}`}>
-        <div className="sidebar-header">
-          <h2>AI Assistant</h2>
-          <button onClick={() => setSidebarOpen(!sidebarOpen)}>☰</button>
-        </div>
-
+    <div className={`app ${dark ? "dark" : "light"}`}>
+      <aside className="sidebar">
+        <h2>AI Assistant</h2>
         <input
-          className="search-box"
+          className="search"
           placeholder="Search chats..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
+        <button className="newchat" onClick={newChat}>+ New Chat</button>
 
-        <button className="new-chat" onClick={newChat}>+ New Chat</button>
-
-        <div className="chat-list">
-          {filteredSessions.map((s) => (
-            <div key={s.id} className="session-row">
-              <span onClick={() => loadHistory(s.id)}>{s.title}</span>
-              <button onClick={() => deleteChat(s.id)}>🗑</button>
-            </div>
-          ))}
+        <div className="chatlist">
+          {sessions
+            .filter(id => id.includes(search))
+            .map(id => (
+              <div
+                key={id}
+                className={`chatitem ${id === activeSession ? "active" : ""}`}
+                onClick={() => loadHistory(id)}
+              >
+                {id.slice(0, 8)}
+              </div>
+            ))}
         </div>
-      </div>
+      </aside>
 
-      <div className="chat-area">
-        <div className="header">
-          <button className="hamburger" onClick={() => setSidebarOpen(true)}>☰</button>
-          <span>AI Assistant</span>
-          <button
-            className="theme-toggle"
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          >
-            {theme === "dark" ? "🌞" : "🌙"}
+      <main className="chat">
+        <header>
+          <h3>AI Assistant</h3>
+          <button className="theme" onClick={() => setDark(!dark)}>
+            {dark ? "🌙" : "☀️"}
           </button>
-        </div>
+        </header>
 
         <div className="messages">
+          {messages.length === 0 && (
+            <div className="welcome">Hi 👋 How can I help you today?</div>
+          )}
+
           {messages.map((m, i) => (
-            <div key={i} className={m.sender === "user" ? "user-bubble" : "ai-bubble"}>
-              <ReactMarkdown>{m.text}</ReactMarkdown>
+            <div key={i} className={`bubble ${m.role}`}>
+              {m.content}
             </div>
           ))}
-          <div ref={chatEndRef}></div>
+          <div ref={bottomRef}></div>
         </div>
 
-        <div className="input-box">
-          <button className="clip-btn" onClick={() => fileInputRef.current.click()}>📎</button>
+        <div className="inputbar">
+          <label className="attach">
+            📎
+            <input type="file" hidden onChange={(e) => setFile(e.target.files[0])} />
+          </label>
           <input
+            placeholder="Type a message..."
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Type a message..."
             onKeyDown={(e) => e.key === "Enter" && sendMessage()}
           />
           <button onClick={sendMessage}>Send</button>
-          <input
-            type="file"
-            ref={fileInputRef}
-            style={{ display: "none" }}
-            onChange={uploadFile}
-          />
         </div>
-      </div>
+      </main>
     </div>
   );
 }
