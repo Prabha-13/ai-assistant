@@ -8,7 +8,7 @@ from google import genai
 
 app = FastAPI()
 
-# CORS (frontend connect panna)
+# Allow frontend access
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -16,7 +16,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Gemini client (API key from Render Environment Variable)
+# Load Gemini API key from Render Environment Variable
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 HISTORY_FILE = "history.json"
@@ -59,12 +59,12 @@ def chat(req: ChatRequest):
 
     try:
         response = client.models.generate_content(
-            model="models/gemini-2.0-flash",   # safe free-tier model
+            model="models/gemini-2.0-flash",
             contents=full_prompt
         )
         ai_text = response.text
     except Exception as e:
-        print("Gemini Error:", e)  # Render logs-la kaattum
+        print("Gemini Error:", e)
         ai_text = f"AI Error: {str(e)}"
 
     history[session_id].append({"role": "ai", "content": ai_text})
