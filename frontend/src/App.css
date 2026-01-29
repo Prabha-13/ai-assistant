@@ -1,8 +1,26 @@
+:root {
+  --bg: #0f172a;
+  --panel: #020617;
+  --text: white;
+  --bubble-user: #2563eb;
+  --bubble-ai: #334155;
+  --border: #1e293b;
+}
+
+body.light {
+  --bg: #f8fafc;
+  --panel: #ffffff;
+  --text: #0f172a;
+  --bubble-user: #dbeafe;
+  --bubble-ai: #e5e7eb;
+  --border: #cbd5e1;
+}
+
 body {
   margin: 0;
+  background: var(--bg);
+  color: var(--text);
   font-family: "Segoe UI", sans-serif;
-  background: #0f172a;
-  color: white;
 }
 
 .app {
@@ -10,17 +28,35 @@ body {
   height: 100vh;
 }
 
-/* Sidebar */
+/* Telegram style sidebar (right slide) */
 .sidebar {
   width: 260px;
-  background: #020617;
+  background: var(--panel);
   padding: 15px;
-  border-right: 1px solid #1e293b;
+  border-left: 1px solid var(--border);
   overflow-y: auto;
+  position: fixed;
+  right: -260px;
+  top: 0;
+  height: 100%;
+  transition: right 0.3s ease;
+  z-index: 10;
 }
 
-.sidebar h2 {
-  margin-bottom: 10px;
+.sidebar.open {
+  right: 0;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: none;
+  z-index: 9;
+}
+
+.overlay.show {
+  display: block;
 }
 
 .new-chat {
@@ -31,48 +67,28 @@ body {
   border: none;
   color: white;
   border-radius: 6px;
-  cursor: pointer;
 }
 
-/* 🔍 Search Box */
 .search-box {
   width: 100%;
   padding: 8px;
   margin-bottom: 10px;
   border-radius: 6px;
-  border: 1px solid #1e293b;
-  background: #020617;
-  color: white;
-  outline: none;
-}
-
-.search-box::placeholder {
-  color: #94a3b8;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
 }
 
 .session-row {
   display: flex;
   justify-content: space-between;
   padding: 8px;
-  background: #020617;
-  border: 1px solid #1e293b;
+  border: 1px solid var(--border);
   border-radius: 6px;
   margin-bottom: 5px;
-  cursor: pointer;
 }
 
-.session-row:hover {
-  background: #1e293b;
-}
-
-.session-row button {
-  background: none;
-  border: none;
-  color: #f87171;
-  cursor: pointer;
-}
-
-/* Chat Area */
+/* Chat */
 .chat-area {
   flex: 1;
   display: flex;
@@ -80,91 +96,78 @@ body {
 }
 
 .header {
-  padding: 15px;
-  background: #020617;
-  border-bottom: 1px solid #1e293b;
-  text-align: center;
-  font-weight: bold;
+  padding: 10px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.hamburger, .theme-toggle {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: var(--text);
 }
 
 .messages {
   flex: 1;
   padding: 20px;
   overflow-y: auto;
-  background: #0f172a;
 }
 
 .user-bubble {
+  background: var(--bubble-user);
   margin-left: auto;
-  background: #2563eb;
   padding: 12px;
   border-radius: 12px;
   max-width: 70%;
   margin-bottom: 10px;
-  word-wrap: break-word;
 }
 
 .ai-bubble {
+  background: var(--bubble-ai);
   margin-right: auto;
-  background: #334155;
   padding: 12px;
   border-radius: 12px;
   max-width: 70%;
   margin-bottom: 10px;
-  word-wrap: break-word;
 }
 
-/* Input */
 .input-box {
   display: flex;
   padding: 10px;
-  border-top: 1px solid #1e293b;
-  background: #020617;
+  border-top: 1px solid var(--border);
+  background: var(--panel);
 }
 
 .input-box input {
   flex: 1;
   padding: 10px;
-  background: #020617;
-  border: 1px solid #1e293b;
-  color: white;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--text);
   border-radius: 6px;
 }
 
 .input-box button {
-  margin-left: 10px;
-  padding: 10px 20px;
+  margin-left: 8px;
+  padding: 10px 14px;
   background: #2563eb;
   border: none;
   color: white;
   border-radius: 6px;
-  cursor: pointer;
 }
 
-/* 📱 Mobile Responsive */
-@media (max-width: 768px) {
-  .sidebar {
-    width: 200px;
-  }
-
-  .user-bubble,
-  .ai-bubble {
-    max-width: 90%;
-  }
+.upload-btn {
+  background: var(--panel);
+  border: 1px solid var(--border);
 }
 
-@media (max-width: 480px) {
-  .app {
-    flex-direction: column;
-  }
-
-  .sidebar {
-    width: 100%;
-    border-right: none;
-    border-bottom: 1px solid #1e293b;
-  }
-
-  .chat-area {
-    height: calc(100vh - 250px);
-  }
+.file-preview {
+  padding: 6px 12px;
+  background: var(--border);
+  font-size: 12px;
+  text-align: center;
 }

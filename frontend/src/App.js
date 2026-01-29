@@ -8,6 +8,11 @@ function App() {
   const [currentSession, setCurrentSession] = useState(null);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [darkMode, setDarkMode] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const fileInputRef = useRef(null);
   const chatEndRef = useRef(null);
 
   useEffect(() => {
@@ -17,6 +22,10 @@ function App() {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    document.body.className = darkMode ? "dark" : "light";
+  }, [darkMode]);
 
   const fetchSessions = async () => {
     const res = await fetch("/sessions");
@@ -34,35 +43,53 @@ function App() {
         text: m.content,
       }))
     );
+    setSidebarOpen(false);
   };
 
   const sendMessage = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() && !selectedFile) return;
 
-    const userMsg = { sender: "user", text: input };
+    const userMsg = { sender: "user", text: input || "[File Uploaded]" };
     setMessages((prev) => [...prev, userMsg]);
-    setInput("");
 
-    const res = await fetch("/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        message: userMsg.text,
-        session_id: currentSession,
-      }),
-    });
+    let data;
 
-    const data = await res.json();
+    if (selectedFile) {
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+      formData.append("question", input || "Explain this file");
+      if (currentSession) formData.append("session_id", currentSession);
+
+      const res = await fetch("/upload", {
+        method: "POST",
+        body: formData,
+      });
+      data = await res.json();
+      setSelectedFile(null);
+    } else {
+      const res = await fetch("/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: input,
+          session_id: currentSession,
+        }),
+      });
+      data = await res.json();
+    }
+
     setCurrentSession(data.session_id);
     fetchSessions();
 
     const aiMsg = { sender: "ai", text: data.reply };
     setMessages((prev) => [...prev, aiMsg]);
+    setInput("");
   };
 
   const newChat = () => {
     setCurrentSession(null);
     setMessages([]);
+    setSidebarOpen(false);
   };
 
   const deleteChat = async (id) => {
@@ -80,12 +107,12 @@ function App() {
 
   return (
     <div className="app">
-      <div className="sidebar">
+      <div className={`overlay ${sidebarOpen ? "show" : ""}`} onClick={() => setSidebarOpen(false)}></div>
+
+      <div className={`sidebar ${sidebarOpen ? "open" : ""}`}>
         <h2>AI Chats</h2>
 
-        <button className="new-chat" onClick={newChat}>
-          + New Chat
-        </button>
+        <button className="new-chat" onClick={newChat}>+ New Chat</button>
 
         <input
           className="search-box"
@@ -103,14 +130,17 @@ function App() {
       </div>
 
       <div className="chat-area">
-        <div className="header">AI Assistant</div>
+        <div className="header">
+          <button className="hamburger" onClick={() => setSidebarOpen(true)}>☰</button>
+          <span>AI Assistant</span>
+          <button className="theme-toggle" onClick={() => setDarkMode(!darkMode)}>
+            {darkMode ? "☀️" : "🌙"}
+          </button>
+        </div>
 
         <div className="messages">
           {messages.map((m, i) => (
-            <div
-              key={i}
-              className={m.sender === "user" ? "user-bubble" : "ai-bubble"}
-            >
+            <div key={i} className={m.sender === "user" ? "user-bubble" : "ai-bubble"}>
               <ReactMarkdown>{m.text}</ReactMarkdown>
             </div>
           ))}
@@ -121,11 +151,23 @@ function App() {
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Send a message..."
+            placeholder="Send a message or upload a file..."
             onKeyDown={(e) => e.key === "Enter" && sendMessage()}
           />
+
+          <button className="upload-btn" onClick={() => fileInputRef.current.click()}>📎</button>
+
+          <input
+            type="file"
+            ref={fileInputRef}
+            style={{ display: "none" }}
+            onChange={(e) => setSelectedFile(e.target.files[0])}
+          />
+
           <button onClick={sendMessage}>Send</button>
         </div>
+
+        {selectedFile && <div className="file-preview">Selected: {selectedFile.name}</div>}
       </div>
     </div>
   );
